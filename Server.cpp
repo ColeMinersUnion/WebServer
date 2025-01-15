@@ -33,43 +33,46 @@ int main() {
         close(server_fd);
         return -1;
     }
-
-    // Listen for incoming connections
-    if (listen(server_fd, 3) < 0) {
-        perror("Listen failed");
-        close(server_fd);
-        return -1;
-    }
-
-    std::cout << "Server is listening on port " << PORT << "..." << std::endl;
-
-    // Accept a single connection (non-multithreaded)
-    if ((client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
-        perror("Accept failed");
-        close(server_fd);
-        return -1;
-    }
-
-    // Read the HTTP request from the client
-    read(client_fd, buffer, BUFFER_SIZE);
-    std::cout << "Received request:\n" << buffer << std::endl;
-
-    // Send HTTP response
-    const char *response =
-        "HTTP/1.1 200 OK\r\n"
-        "Content-Type: text/html\r\n"
-        "Content-Length: 57\r\n"
-        "\r\n"
-        "<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>";
-
-    write(client_fd, response, strlen(response));
-    std::cout << "Response sent." << std::endl;
-
-
     
-    // Close the connection
-    close(client_fd);
+    while(true){
+        
 
+        // Listen for incoming connections
+        if (listen(server_fd, 3) < 0) {
+            perror("Listen failed");
+            close(server_fd);
+            return -1;
+        }
+
+        std::cout << "Server is listening on port " << PORT << "..." << std::endl;
+
+        // Accept a single connection (non-multithreaded)
+        if ((client_fd = accept(server_fd, (struct sockaddr *)&address, (socklen_t *)&addrlen)) < 0) {
+            perror("Accept failed");
+            close(server_fd);
+            return -1;
+        }
+
+        // Read the HTTP request from the client
+        read(client_fd, buffer, BUFFER_SIZE);
+        std::cout << "Received request:\n" << buffer << std::endl;
+
+        // Send HTTP response
+        const char *response =
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/html\r\n"
+            "Content-Length: 57\r\n"
+            "\r\n"
+            "<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>";
+
+        write(client_fd, response, strlen(response));
+        std::cout << "Response sent." << std::endl;
+
+
+        
+        // Close the connection
+        close(client_fd);
+    }
     // TODO: Implement a loop to accept multiple connections, and only close on failure or signal
     close(server_fd);
 
