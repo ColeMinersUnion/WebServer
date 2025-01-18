@@ -1,17 +1,22 @@
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <cstring>
-#include <sys/types.h>
+//Libraries I have used before
+#include <iostream> //used for print statements
+#include <cstring>  //string manipulation
+
+//Libraries I have not used before
+#include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
 
+// Constants
 #define PORT 8080
 #define BUFFER_SIZE 1024
 
+//The port defines where on localhost the server is accessible.
+
+// Executed Code. 
 int main() {
-    int server_fd, client_fd;
+    int server_fd, client_fd; 
     struct sockaddr_in address;
     int addrlen = sizeof(address);
     char buffer[BUFFER_SIZE] = {0};
@@ -33,7 +38,7 @@ int main() {
         close(server_fd);
         return -1;
     }
-    
+
     while(true){
         
 
@@ -53,15 +58,18 @@ int main() {
             return -1;
         }
 
+
         // Read the HTTP request from the client
         read(client_fd, buffer, BUFFER_SIZE);
         std::cout << "Received request:\n" << buffer << std::endl;
+
+        
 
         // Send HTTP response
         const char *response =
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/html\r\n"
-            "Content-Length: 57\r\n"
+            "Content-Length: 61\r\n"
             "\r\n"
             "<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>";
 
