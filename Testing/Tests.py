@@ -1,5 +1,6 @@
 import requests
 import random
+import threading
 
 """
 I'm using pytest as a way to organize and efficiently run tests. I do specific tests manually,
@@ -31,7 +32,6 @@ def test_localhosts():
     assert response.text == '<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>'
 
 
-
 def test_RandomURLS():
     url = 'http://localhost:8080/'
     for _ in range(random.randint(1, 50)):
@@ -40,3 +40,36 @@ def test_RandomURLS():
     assert response.status_code == 200
     assert response.text == '<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>'
 
+def test_longURL():
+    url = 'http://localhost:8080/'
+
+    #! The URL is longer than the server's buffer
+    for _ in range(1025):
+        url += random.choice('abcdefghijklmnopqrstuvwxyz1234567890')
+    response = requests.get(url)
+    assert response.status_code == 200
+    assert response.text == '<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>'
+
+
+def test_queue():
+    #* Test the overload server with simultaneous requests
+    #* I was unable to, either the server responded too fast, 
+    #* or the requests library was too slow to send multiple requests
+    tasks = [threading.Thread(target=get),threading.Thread(target=get),threading.Thread(target=get),threading.Thread(target=get)]
+    for t in tasks:
+        t.start()
+    
+    for t in tasks:
+        t.join()
+
+
+    
+def get():
+    url = 'http://localhost:8080/'
+    response = requests.get(url)
+    print(f'Get: {response.status_code}')
+    assert response.status_code == 200
+    assert response.text == '<!DOCTYPE html><html><body><h1>Hello World</h1></body></html>'
+
+if __name__ == '__main__':
+    test_queue()
