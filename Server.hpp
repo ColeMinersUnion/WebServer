@@ -1,32 +1,32 @@
+// Server.hpp
 #ifndef SERVER_HPP
 #define SERVER_HPP
 
-#include <iostream>
 #include <boost/asio.hpp>
-#include <boost/socket.hpp>
+#include <boost/beast.hpp>
 #include <boost/filesystem.hpp>
-#include <string>
+#include <iostream>
+#include <thread>
+
+namespace asio = boost::asio;
+namespace beast = boost::beast;
+namespace http = beast::http;
+namespace fs = boost::filesystem;
+using tcp = asio::ip::tcp;
 
 class Server {
 public:
-    // Constructors
-    Server();
-    ~Server();
-
-    // Singleton instantiation (placed in another .cpp file)
-    static Server& getServer();
-
-    // Methods
-    void start();
-    void stop();
-    bool isRunning() const;
-    void sendMessage(const std::string& message);
-    void listen(const std::string& port);
+    explicit Server(unsigned short port);
+    void run();
 
 private:
-    // Private members go here
-    bool running;
-    // Other necessary member variables
-};
+    void accept();
+    void handle_session(tcp::socket socket);
+    void handle_request(http::request<http::string_body> req, tcp::socket& socket);
+    
+    asio::io_context io_context_;
+    tcp::acceptor acceptor_;
+    const std::string SERVE_DIR = "/Users/chansen/WebServer/bin";
+};;
 
-#endif
+#endif // SERVER_HPP

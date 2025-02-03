@@ -34,3 +34,9 @@
 *env/
 *__pycache__/
 *.zip
+
+# CMake
+CMakeFiles/
+CMakeCache.txt
+build/
+.vscode/
