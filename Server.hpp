@@ -1,32 +1,30 @@
-// Server.hpp
-#ifndef SERVER_HPP
-#define SERVER_HPP
+
+// WebServer.hpp
+#ifndef WEBSERVER_HPP
+#define WEBSERVER_HPP
 
 #include <boost/asio.hpp>
-#include <boost/beast.hpp>
-#include <boost/filesystem.hpp>
 #include <iostream>
-#include <thread>
-
-namespace asio = boost::asio;
-namespace beast = boost::beast;
-namespace http = beast::http;
-namespace fs = boost::filesystem;
-using tcp = asio::ip::tcp;
+#include <fstream>
+#include <string>
+#include <sstream>
 
 class Server {
 public:
-    explicit Server(unsigned short port);
-    void run();
+    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir);
+    void start();
 
 private:
-    void accept();
-    void handle_session(tcp::socket socket);
-    void handle_request(http::request<http::string_body> req, tcp::socket& socket);
-    
-    asio::io_context io_context_;
-    tcp::acceptor acceptor_;
-    const std::string SERVE_DIR = "/Users/chansen/WebServer/bin";
-};;
+    void do_accept();
+    void handle_request(boost::asio::ip::tcp::socket socket);
+    std::string generate_response(const std::string& request);
+    std::string get_mime_type(const std::string& extension);
+    std::string read_file(const std::string& path, bool& found);
 
-#endif // SERVER_HPP
+
+    boost::asio::ip::tcp::acceptor acceptor_;
+    std::string root_directory_;
+};
+
+#endif // WEBSERVER_HPP
+

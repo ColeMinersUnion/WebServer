@@ -1,58 +1,69 @@
-// Server.cpp
 #include "Server.hpp"
 
-Server::Server(unsigned short port) : acceptor_(io_context_, {tcp::v4(), port}) {}
+Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir)
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir) {}
 
-void Server::run() {
-    accept();
-    io_context_.run();
+void Server::start() {
+    do_accept();
 }
 
-void Server::accept() {
-    acceptor_.async_accept([this](boost::system::error_code ec, tcp::socket socket) {
+void Server::do_accept() {
+    acceptor_.async_accept([this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
         if (!ec) {
-            std::thread(&Server::handle_session, this, std::move(socket)).detach();
+            handle_request(std::move(socket));
         }
-        accept();
+        do_accept();
     });
 }
 
-void Server::handle_session(tcp::socket socket) {
-    try {
-        beast::flat_buffer buffer;
-        http::request<http::string_body> req;
-        http::read(socket, buffer, req);
-        handle_request(std::move(req), socket);
-    } catch (const std::exception& e) {
-        std::cerr << "Session error: " << e.what() << std::endl;
-    }
-}
+void Server::handle_request(boost::asio::ip::tcp::socket socket) {
+    boost::asio::streambuf buffer;
+    boost::asio::read_until(socket, buffer, "\r\n\r\n");
+    std::istream request_stream(&buffer);
+    std::string request_line;
+    std::getline(request_stream, request_line);
 
-void Server::handle_request(http::request<http::string_body> req, tcp::socket& socket) {
-    http::response<http::file_body> res;
-    std::string target = req.target();
-    if (target == "/") target = "/index.html";
+    std::istringstream request_line_stream(request_line);
+    std::string method, uri, version;
+    request_line_stream >> method >> uri >> version;
 
-    fs::path file_path = fs::path(SERVE_DIR) / target.substr(1);
-    if (!fs::exists(file_path) || fs::is_directory(file_path)) {
-        res.result(http::status::not_found);
-        res.set(http::field::content_type, "text/plain");
-        res.set(http::field::body, "File not found");
-        res.prepare_payload();
+    if (uri == "/") uri = "/index.html";
+    std::string file_path = root_directory_ + uri;
+    bool file_found;
+    std::string file_content = read_file(file_path, file_found);
+
+    std::ostringstream response_stream;
+    if (file_found) {
+        response_stream << "HTTP/1.1 200 OK\r\n";
+        response_stream << "Content-Length: " << file_content.size() << "\r\n";
+        response_stream << "Content-Type: " << get_mime_type(file_path) << "\r\n\r\n";
+        response_stream << file_content;
     } else {
-        beast::error_code ec;
-        http::file_body::value_type body;
-        body.open(file_path.string().c_str(), beast::file_mode::scan, ec);
-        if (ec) {
-            res.result(http::status::internal_server_error);
-            res.set(http::field::content_type, "text/plain");
-            res.set(http::field::body, "Failed to open file");
-            res.prepare_payload();
-        } else {
-            res.result(http::status::ok);
-            res.set(http::field::content_type, "application/octet-stream");
-            res.body() = std::move(body);
-        }
+        response_stream << "HTTP/1.1 404 Not Found\r\n\r\n";
     }
-    http::write(socket, res);
+
+    std::string response = response_stream.str();
+    boost::asio::write(socket, boost::asio::buffer(response));
 }
+
+std::string Server::read_file(const std::string& path, bool& found) {
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        found = false;
+        return "";
+    }
+    found = true;
+    std::ostringstream contents;
+    contents << file.rdbuf();
+    return contents.str();
+}
+
+std::string Server::get_mime_type(const std::string& extension) {
+    if (extension.ends_with(".html")) return "text/html";
+    if (extension.ends_with(".txt")) return "text/plain";
+    if (extension.ends_with(".jpg")) return "image/jpeg";
+    if (extension.ends_with(".png")) return "image/png";
+    if (extension.ends_with(".css")) return "text/css";
+    return "application/octet-stream";
+}
+

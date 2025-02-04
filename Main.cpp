@@ -1,14 +1,15 @@
 // main.cpp
 #include "Server.hpp"
+#include <boost/asio.hpp>
 
 int main() {
     try {
-        unsigned short port = 8000;
-        Server server(port);
-        std::cout << "Server running on port " << port << "..." << std::endl;
-        server.run();
+        boost::asio::io_context io_context;
+        Server server(io_context, 8000, "./bin");
+        server.start();
+        io_context.run();
     } catch (const std::exception& e) {
-        std::cout << "Error: " << e.what() << std::endl;
+        std::cerr << "Error: " << e.what() << std::endl;
     }
     return 0;
 }
