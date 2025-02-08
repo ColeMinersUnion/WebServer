@@ -1,7 +1,7 @@
 
 // WebServer.hpp
-#ifndef WEBSERVER_HPP
-#define WEBSERVER_HPP
+#ifndef SERVER_HPP
+#define SERVER_HPP
 
 #include <boost/asio.hpp>
 #include <iostream>

@@ -5,7 +5,8 @@
 int main() {
     try {
         boost::asio::io_context io_context;
-        Server server(io_context, 8000, "./bin");
+        //!Note to self: Since I'm using CMAKE, I must use absolute paths for file io.
+        Server server(io_context, 8000, "/Users/chansen/WebServer/bin");
         server.start();
         io_context.run();
     } catch (const std::exception& e) {

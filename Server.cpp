@@ -1,5 +1,6 @@
 #include "Server.hpp"
 
+//*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir)
     : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir) {}
 
