@@ -36,11 +36,10 @@ private:
     std::string get_mime_type(const std::string& extension);
     std::string read_file(const std::string& path, bool& found);
     
-
-
     boost::asio::ip::tcp::acceptor acceptor_;
     std::string root_directory_;
     record current_request;
+    boost::asio::streambuf buffer_; // Add buffer member variable
 };
 
 #endif // WEBSERVER_HPP

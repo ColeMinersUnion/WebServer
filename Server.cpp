@@ -2,7 +2,7 @@
 
 //*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir) {}
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_() {}
 
 void Server::start() {
     Server::current_request.state = IDLE;
@@ -20,9 +20,8 @@ void Server::do_accept() {
 
 void Server::handle_request(boost::asio::ip::tcp::socket socket) {
     Server::current_request.state = PROCESSING;
-    boost::asio::streambuf buffer;
-    boost::asio::read_until(socket, buffer, "\r\n\r\n");
-    std::istream request_stream(&buffer);
+    boost::asio::read_until(socket, buffer_, "\r\n\r\n");
+    std::istream request_stream(&buffer_);
     std::string request_line;
     std::getline(request_stream, request_line);
 
@@ -34,9 +33,6 @@ void Server::handle_request(boost::asio::ip::tcp::socket socket) {
     std::string file_path = root_directory_ + uri;
     bool file_found;
     std::string file_content = read_file(file_path, file_found);
-
-    
-   
 
     std::ostringstream response_stream;
     if (file_found) {
@@ -50,7 +46,6 @@ void Server::handle_request(boost::asio::ip::tcp::socket socket) {
 
     std::string response = response_stream.str();
 
-    //Straight up inaccessible. Why must we record this but never use the record?
     Server::current_request.request = request_line;
     Server::current_request.timestamp = std::time(nullptr);
     Server::current_request.response = response;
@@ -61,6 +56,8 @@ void Server::handle_request(boost::asio::ip::tcp::socket socket) {
     Server::current_request.state = RESPONDING;
     boost::asio::write(socket, boost::asio::buffer(response));
     Server::current_request.state = IDLE;
+
+    buffer_.consume(buffer_.size()); // Clear the buffer for the next request
 }
 
 std::string Server::read_file(const std::string& path, bool& found) {
