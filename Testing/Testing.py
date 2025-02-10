@@ -36,6 +36,22 @@ def pdf_to_text():
         for p in pdf.pages:
             f.write(p.extract_text())
 
+def test_binary():
+    res = requests.get(URL + 'goat.jpg')
+    assert res.status_code == 200
+    with open('../bin/goat.jpg', 'rb') as f:
+        assert res.content == f.read()
+
+def test_binary_404():
+    res = requests.get(URL + 'goat.jpeg')
+    assert res.status_code == 404
+
+def test_binary_again():
+    res = requests.get(URL + 'Hat.jpg')
+    assert res.status_code == 200
+    with open('../bin/goat.jpg', 'rb') as f:
+        assert res.content == f.read()
+
     
 
 
