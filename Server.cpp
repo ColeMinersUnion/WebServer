@@ -2,12 +2,14 @@
 
 //*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 //* The acceptor object is used to listen for incoming connections.
-Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_() {}
+Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads)
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads) {
+        Server::current_requests.resize(num_threads);
+    }
 
 //* Starts the server.
 void Server::start() {
-    Server::current_request.state = IDLE;
+    Server::current_requests[0].state = IDLE;
     do_accept();
 }
 
@@ -25,7 +27,7 @@ void Server::do_accept() {
 //* Handles the incoming request.
 void Server::handle_request(boost::asio::ip::tcp::socket socket) {
     //* Sets the state of the server
-    Server::current_request.state = PROCESSING;
+    Server::current_requests[0].state = PROCESSING;
 
     //* Reades the request. '\r\n\r\n' is the end of the request.
     boost::asio::read_until(socket, buffer_, "\r\n\r\n");
@@ -64,17 +66,17 @@ void Server::handle_request(boost::asio::ip::tcp::socket socket) {
     std::string response = response_stream.str();
 
     //* Records the request. 
-    Server::current_request.request = request_line;
-    Server::current_request.timestamp = std::time(nullptr);
-    Server::current_request.response = response;
-    std::cout << "Request: " << Server::current_request.request << std::endl;
-    std::cout << "Timestamp: " << Server::current_request.timestamp << std::endl;
-    std::cout << "Response: " << Server::current_request.response << std::endl;
+    Server::current_requests[0].request = request_line;
+    Server::current_requests[0].timestamp = std::time(nullptr);
+    Server::current_requests[0].response = response;
+    std::cout << "Request: " << Server::current_requests[0].request << std::endl;
+    std::cout << "Timestamp: " << Server::current_requests[0].timestamp << std::endl;
+    std::cout << "Response: " << Server::current_requests[0].response << std::endl;
 
     //* Sends the response.
-    Server::current_request.state = RESPONDING;
+    Server::current_requests[0].state = RESPONDING;
     boost::asio::write(socket, boost::asio::buffer(response));
-    Server::current_request.state = IDLE;
+    Server::current_requests[0].state = IDLE;
 
     buffer_.consume(buffer_.size());
     //* Clear the buffer for the next request

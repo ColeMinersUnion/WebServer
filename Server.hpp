@@ -11,6 +11,7 @@
 #include <string>
 #include <sstream>
 #include <ctime>
+#include <vector>
 
 //* HW3
 #include "ThreadPool.hpp"
@@ -41,7 +42,7 @@ typedef struct _record record;
 class Server {
 public:
     //* Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
-    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir);
+    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads);
     //* Starts the server.
     void start();
 
@@ -56,7 +57,7 @@ private:
     //* Objects and member variables.
     boost::asio::ip::tcp::acceptor acceptor_;
     std::string root_directory_;
-    record current_request;
+    std::vector<record> current_requests;
     boost::asio::streambuf buffer_; 
 
     //* Threadpool stuff!
