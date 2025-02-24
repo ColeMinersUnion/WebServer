@@ -18,6 +18,8 @@ add_executable(WebServer
     Main.cpp
     Server.hpp
     Server.cpp
+    ThreadPool.hpp
+    ThreadPool.cpp
 )
 
 # Link Boost libraries

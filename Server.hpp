@@ -12,6 +12,9 @@
 #include <sstream>
 #include <ctime>
 
+//* HW3
+#include "ThreadPool.hpp"
+
 //* Fulfilling a requirement. 
 //* Tracks the state of the server.
 enum _process_state {
@@ -26,6 +29,7 @@ struct _record {
     std::string request;
     std::time_t timestamp;
     std::string response;
+    int thread_id;
     enum _process_state state;
 };
 
@@ -54,7 +58,10 @@ private:
     std::string root_directory_;
     record current_request;
     boost::asio::streambuf buffer_; 
+
+    //* Threadpool stuff!
+    ThreadPool pool;
 };
 
-#endif // WEBSERVER_HPP
+#endif 
 

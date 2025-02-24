@@ -2,8 +2,6 @@
 #include "Server.hpp"
 #include <boost/asio.hpp>
 
-//! I am commenting less this time, I found that all the comments made the code harder to read.
-//! This could very well be a consequence of colorful comments.
 
 int main() {
     try {
