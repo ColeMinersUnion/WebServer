@@ -49,7 +49,7 @@ public:
 private:
     
     void do_accept();
-    void handle_request(boost::asio::ip::tcp::socket socket);
+    void handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket, int thread_id);
     std::string get_mime_type(const std::string& extension);
     std::string read_file(const std::string& path, bool& found);
     
@@ -64,5 +64,5 @@ private:
     ThreadPool pool;
 };
 
-#endif 
+#endif
 

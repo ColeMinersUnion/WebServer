@@ -18,15 +18,6 @@ ThreadPool::ThreadPool(size_t num_threads) {
     }
 }
 
-template<class F>
-void ThreadPool::enqueue(F&& f) {
-    {
-        std::unique_lock<std::mutex> lock(queue_mutex);
-        tasks.emplace(std::forward<F>(f));
-    }
-    condition.notify_one();
-}
-
 ThreadPool::~ThreadPool() {
     {
         std::unique_lock<std::mutex> lock(queue_mutex);

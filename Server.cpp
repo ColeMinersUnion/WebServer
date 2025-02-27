@@ -16,21 +16,24 @@ void Server::start() {
 //* Uses the acceptor object to asynchronously accept incoming connections.
 //* When a connection is accepted, the handle_request function is called.
 void Server::do_accept() {
-    acceptor_.async_accept([this](boost::system::error_code ec, boost::asio::ip::tcp::socket socket) {
+    auto socket = std::make_shared<boost::asio::ip::tcp::socket>(acceptor_.get_executor());
+    acceptor_.async_accept(*socket, [this, socket](boost::system::error_code ec) {
         if (!ec) {
-            handle_request(std::move(socket));
+            pool.enqueue([this, socket]() mutable {
+                handle_request(socket, 0);
+            });
         }
         do_accept();
     });
 }
 
 //* Handles the incoming request.
-void Server::handle_request(boost::asio::ip::tcp::socket socket) {
+void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket, int thread_id) {
     //* Sets the state of the server
-    Server::current_requests[0].state = PROCESSING;
+    Server::current_requests[thread_id].state = PROCESSING;
 
     //* Reades the request. '\r\n\r\n' is the end of the request.
-    boost::asio::read_until(socket, buffer_, "\r\n\r\n");
+    boost::asio::read_until(*socket, buffer_, "\r\n\r\n");
 
     //* Parses the request.
     std::istream request_stream(&buffer_);
@@ -66,17 +69,17 @@ void Server::handle_request(boost::asio::ip::tcp::socket socket) {
     std::string response = response_stream.str();
 
     //* Records the request. 
-    Server::current_requests[0].request = request_line;
-    Server::current_requests[0].timestamp = std::time(nullptr);
-    Server::current_requests[0].response = response;
+    Server::current_requests[thread_id].request = request_line;
+    Server::current_requests[thread_id].timestamp = std::time(nullptr);
+    Server::current_requests[thread_id].response = response;
     std::cout << "Request: " << Server::current_requests[0].request << std::endl;
     std::cout << "Timestamp: " << Server::current_requests[0].timestamp << std::endl;
     std::cout << "Response: " << Server::current_requests[0].response << std::endl;
 
     //* Sends the response.
-    Server::current_requests[0].state = RESPONDING;
-    boost::asio::write(socket, boost::asio::buffer(response));
-    Server::current_requests[0].state = IDLE;
+    Server::current_requests[thread_id].state = RESPONDING;
+    boost::asio::write(*socket, boost::asio::buffer(response));
+    Server::current_requests[thread_id].state = IDLE;
 
     buffer_.consume(buffer_.size());
     //* Clear the buffer for the next request

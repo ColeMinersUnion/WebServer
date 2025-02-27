@@ -23,7 +23,13 @@ class ThreadPool {
         //This will be used to add requests to the queue such that
         //The threads can process them.
         template<class F>
-        void enqueue(F&& f);
+        void enqueue(F&& f) {
+            {
+                std::unique_lock<std::mutex> lock(queue_mutex);
+                tasks.emplace(std::forward<F>(f));
+            }
+            condition.notify_one();
+        }
 
         //Destructor. Safely destroys the thread pool.
         ~ThreadPool();
