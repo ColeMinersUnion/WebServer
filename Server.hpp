@@ -19,9 +19,11 @@
 //* Fulfilling a requirement. 
 //* Tracks the state of the server.
 enum _process_state {
-    IDLE,
+    NEW,
+    WAITING,
     PROCESSING,
-    RESPONDING
+    RESPONDING,
+    FINISHED
 };
 
 //* Fulfilling a requirement.
@@ -30,6 +32,7 @@ struct _record {
     std::string request;
     std::time_t timestamp;
     std::string response;
+    pid_t process_id;
     int thread_id;
     enum _process_state state;
 };

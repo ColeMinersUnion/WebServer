@@ -9,7 +9,7 @@ Server::Server(boost::asio::io_context& io_context, short port, const std::strin
 
 //* Starts the server.
 void Server::start() {
-    Server::current_requests[0].state = IDLE;
+    Server::current_requests[0].state = WAITING;
     do_accept();
 }
 
@@ -51,22 +51,33 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* File navigation purposes
     std::string file_path = root_directory_ + uri;
     bool file_found;
-    std::string file_content = read_file(file_path, file_found);
+    std::string request_body;;
+    //* If the file is executable, execute it.
+    if (isExecutable(uri)) {
+        std::cout << "Executable file found" << std::endl;
+        request_body = execute(file_path, file_found);
+    } else {
+        request_body = read_file(file_path, file_found);
+
+    }
+
 
     std::ostringstream response_stream;
     if (file_found) {
         //* Responds by sending the requested file.
         response_stream << "HTTP/1.1 200 OK\r\n";
-        response_stream << "Content-Length: " << file_content.size() << "\r\n";
+        response_stream << "Content-Length: " << request_body.size() << "\r\n";
         response_stream << "Content-Type: " << get_mime_type(file_path) << "\r\n\r\n";
-        response_stream << file_content;
+        //*the appropriate response
+        response_stream << request_body;
     } else {
         //* Responds with a 404 error.
         response_stream << "HTTP/1.1 404 Not Found\r\n\r\n";
     }
 
     //* Converts to a response.
-    std::string response = response_stream.str();
+   std::string response = response_stream.str();
+    
 
     //* Records the request. 
     Server::current_requests[thread_id].request = request_line;
@@ -79,7 +90,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* Sends the response.
     Server::current_requests[thread_id].state = RESPONDING;
     boost::asio::write(*socket, boost::asio::buffer(response));
-    Server::current_requests[thread_id].state = IDLE;
+    Server::current_requests[thread_id].state = FINISHED;
 
     buffer_.consume(buffer_.size());
     //* Clear the buffer for the next request
@@ -105,20 +116,92 @@ std::string Server::get_mime_type(const std::string& extension) {
     if (extension.ends_with(".jpg")) return "image/jpeg";
     if (extension.ends_with(".png")) return "image/png";
     if (extension.ends_with(".css")) return "text/css";
+    if (extension.ends_with(".o")) return "text/plain";
     return "application/octet-stream";
 }
 
 bool Server::isExecutable(const std::string& extension){
-    if (extension.ends_with(".exe")) return true;
+    //if (extension.ends_with(".exe")) return true;
     //if (extension.ends_with(".sh")) return true;
     //if (extension.ends_with(".bat")) return true;
     if (extension.ends_with(".o")) return true;
     return false;
 }
 
+/*
+  This function forks the process.
+  The forked process will execute the file at the path.
+  The parent process will wait for the child process to finish executing.
+  The function will return the output of the child process. 
+*/
 std::string Server::execute(const std::string& path, bool& found){
-    //This function forks the process.
-    //The forked process will execute the file at the path.
-    //The parent process will wait for the child process to finish executing.
-    //The function will return the output of the child process. 
+    //* Is the file in the bin directory?
+    // Check if file exists using access()
+    if (access(path.c_str(), F_OK) == -1) {
+        std::cerr << "File not found" << std::endl;
+        found = false;
+        return "";
+    }
+    found = true;
+
+    char cwd[256];
+    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
+        std::cout << "Current working directory: " << cwd << std::endl;
+    }
+
+    std::string exe_path_str = "../bin/Extend.o";
+    std::cout << "Executing: " << exe_path_str << std::endl;
+
+    int pipefd[2];
+    if (pipe(pipefd) == -1) {
+        perror("pipe");
+        return "Failed to create pipe";
+    }
+
+    pid_t pid = fork();
+    Server::current_requests[0].process_id = pid;
+
+    if (pid == 0) {
+        // Child process
+        close(pipefd[0]); // Close read end of pipe
+        dup2(pipefd[1], STDOUT_FILENO); // Redirect stdout to pipe
+        dup2(pipefd[1], STDERR_FILENO); // Redirect stderr to pipe
+        close(pipefd[1]);
+
+        // Execute the file
+        char* args[] = {const_cast<char*>(exe_path_str.c_str()), nullptr};
+        execvp(args[0], args);
+
+        // execvp only returns if it fails
+        perror("execvp");
+        exit(EXIT_FAILURE);
+    } else if (pid > 0) {
+        // Parent process
+        close(pipefd[1]); // Close write end of pipe
+
+        // Capture output
+        std::string output;
+        char buffer[256];
+        ssize_t count;
+        while ((count = read(pipefd[0], buffer, sizeof(buffer) - 1)) > 0) {
+            buffer[count] = '\0';
+            output += buffer;
+        }
+        close(pipefd[0]);
+
+        int status;
+        waitpid(pid, &status, 0);
+
+        if (WIFEXITED(status)) {
+            std::cout << "Process finished with status: " << WEXITSTATUS(status) << std::endl;
+        } else if (WIFSIGNALED(status)) {
+            std::cerr << "Process terminated by signal: " << WTERMSIG(status) << std::endl;
+        }
+
+        return output;
+    } else {
+        // Fork failed
+        perror("fork");
+        return "Fork failed";
+    }
 }

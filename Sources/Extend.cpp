@@ -10,13 +10,13 @@
 #include <string>
 
 int main(int argc, char* argv[]) {
-    std::string file_path = "test.txt";
+    std::string file_path = "../bin/test.txt";
     std::ofstream file(file_path, std::ios::app);
     if (!file) {
         std::cerr << "Error: Could not open file." << std::endl;
         return 1;
     }
-    file << "Another One. Thank you\n" << std::endl;
+    file << "Another One. Thank you!\n" << std::endl;
     file.close();
     return 0;
 }
