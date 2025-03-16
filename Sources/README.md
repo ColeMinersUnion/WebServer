@@ -1,0 +1,1 @@
+I am creating some executable files to store in my bin. I'm going to create some c++ files to compile using a clang terminal command. I'm also then going to hopefully make some shell scripts

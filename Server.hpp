@@ -53,6 +53,8 @@ private:
     std::string get_mime_type(const std::string& extension);
     std::string read_file(const std::string& path, bool& found);
     
+    bool isExecutable(const std::string& extension);
+    std::string execute(const std::string& path, bool& found);
 
     //* Objects and member variables.
     boost::asio::ip::tcp::acceptor acceptor_;

@@ -108,3 +108,17 @@ std::string Server::get_mime_type(const std::string& extension) {
     return "application/octet-stream";
 }
 
+bool Server::isExecutable(const std::string& extension){
+    if (extension.ends_with(".exe")) return true;
+    //if (extension.ends_with(".sh")) return true;
+    //if (extension.ends_with(".bat")) return true;
+    if (extension.ends_with(".o")) return true;
+    return false;
+}
+
+std::string Server::execute(const std::string& path, bool& found){
+    //This function forks the process.
+    //The forked process will execute the file at the path.
+    //The parent process will wait for the child process to finish executing.
+    //The function will return the output of the child process. 
+}
