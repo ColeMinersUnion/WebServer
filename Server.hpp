@@ -51,13 +51,20 @@ public:
 
 private:
     
+    //* Functions
+    //Uses the acceptor object to asynchronously accept incoming connections.
     void do_accept();
+    //Handles the incoming request.
     void handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket, int thread_id);
+    //Figures out how to format the response.
     std::string get_mime_type(const std::string& extension);
+    //Reads the file from the bin directory.
     std::string read_file(const std::string& path, bool& found);
     
+    //checks to see if a given file is executable.
     bool isExecutable(const std::string& extension);
-    std::string execute(const std::string& path, const std::string& uri, bool& found);
+    //Forks the process and Executes the file.
+    std::string execute(const std::string& path, const std::string& uri, bool& found, int thread_id);
 
     //* Objects and member variables.
     boost::asio::ip::tcp::acceptor acceptor_;

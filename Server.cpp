@@ -55,13 +55,14 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* If the file is executable, execute it.
     if (isExecutable(uri)) {
         std::cout << "Executable file found" << std::endl;
-        request_body = execute(file_path, uri, file_found);
+        request_body = execute(file_path, uri, file_found, thread_id);
     } else {
+        //* Otherwise read in the file
         request_body = read_file(file_path, file_found);
 
     }
 
-
+    //* Streaming the response to the client.
     std::ostringstream response_stream;
     if (file_found) {
         //* Responds by sending the requested file.
@@ -79,10 +80,11 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
    std::string response = response_stream.str();
     
 
-    //* Records the request. 
+    //* Records the request in the control block
     Server::current_requests[thread_id].request = request_line;
     Server::current_requests[thread_id].timestamp = std::time(nullptr);
     Server::current_requests[thread_id].response = response;
+    //* Printing parts of the request for validation purposes.
     std::cout << "Request: " << Server::current_requests[0].request << std::endl;
     std::cout << "Timestamp: " << Server::current_requests[0].timestamp << std::endl;
     std::cout << "Response: " << Server::current_requests[0].response << std::endl;
@@ -98,12 +100,14 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 
 //* Reading files from the directory. 
 std::string Server::read_file(const std::string& path, bool& found) {
+    //* Does the file exist?
     std::ifstream file(path, std::ios::binary);
     if (!file) {
         found = false;
         return "";
     }
     found = true;
+    //* Stream the contents back to the handler
     std::ostringstream contents;
     contents << file.rdbuf();
     return contents.str();
@@ -123,9 +127,7 @@ std::string Server::get_mime_type(const std::string& extension) {
 }
 
 bool Server::isExecutable(const std::string& extension){
-    //if (extension.ends_with(".exe")) return true;
-    //if (extension.ends_with(".sh")) return true;
-    //if (extension.ends_with(".bat")) return true;
+    //* Is the executable file an object file? (Can I execute it)
     if (extension.ends_with(".o")) return true;
     return false;
 }
@@ -136,19 +138,21 @@ bool Server::isExecutable(const std::string& extension){
   The parent process will wait for the child process to finish executing.
   The function will return the output of the child process. 
 */
-std::string Server::execute(const std::string& path, const std::string& uri, bool& found){
+std::string Server::execute(const std::string& path, const std::string& uri, bool& found, int thread_id){
     // Debugged with the help of Mr. GPT
-    // Check if file exists using access()
+    // Check if file exists using access
     if (access(path.c_str(), F_OK) == -1) {
         std::cerr << "File not found" << std::endl;
         found = false;
         return "";
     }
     found = true;
-
+    //* The current working directory is in ./build
+    //* I need to access the bin directory to execute the file
     std::string exe_path_str = "../bin" + uri;
     std::cout << "Executing: " << exe_path_str << std::endl;
 
+    //Creating a pipe to return execvp errors to the uers.
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
@@ -156,8 +160,9 @@ std::string Server::execute(const std::string& path, const std::string& uri, boo
         return "Failed to create pipe";
     }
 
+    //Forking the 
     pid_t pid = fork();
-    Server::current_requests[0].process_id = pid;
+    Server::current_requests[thread_id].process_id = pid;
 
     if (pid == 0) {
         // Child process
@@ -181,6 +186,7 @@ std::string Server::execute(const std::string& path, const std::string& uri, boo
         std::string output;
         char buffer[256];
         ssize_t count;
+        // Read from pipe until EOF and closing the pipe.
         while ((count = read(pipefd[0], buffer, sizeof(buffer) - 1)) > 0) {
             buffer[count] = '\0';
             output += buffer;
@@ -189,7 +195,7 @@ std::string Server::execute(const std::string& path, const std::string& uri, boo
 
         int status;
         waitpid(pid, &status, 0);
-
+        // Check if process exited normally or by signal
         if (WIFEXITED(status)) {
             std::cout << "Process finished with status: " << WEXITSTATUS(status) << std::endl;
         } else if (WIFSIGNALED(status)) {

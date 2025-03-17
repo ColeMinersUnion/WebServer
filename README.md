@@ -9,3 +9,6 @@ This code was written primarily by deepseek-r1. I was playing around with it the
 
 ## Notes and other things.
 There was a major refactoring this homework, I tried to future proof this code to make it easier to work with for the rest of the semester. When talking about allocating buffers at the start of the program, I created a streambuf object at the start, but it uses dynamic memory allocation so I'm not sure if it still applies. However, I felt that this was the best solution to keep everything working within the boost framework. 
+
+## HW 4
+All unit tests have passed. (All four python files in Testing/). I created Extend.o specifically such that it was easy to test that it works with code. This code is not super thread-safe, I'm working to build in more of that threading best practices as I go through. 
