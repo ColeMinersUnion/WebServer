@@ -146,12 +146,13 @@ std::string Server::execute(const std::string& path, const std::string& uri, boo
     }
     found = true;
 
-    std::string exe_path_str = "../bin/" + uri;
+    std::string exe_path_str = "../bin" + uri;
     std::cout << "Executing: " << exe_path_str << std::endl;
 
     int pipefd[2];
     if (pipe(pipefd) == -1) {
         perror("pipe");
+
         return "Failed to create pipe";
     }
 

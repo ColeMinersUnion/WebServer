@@ -1,8 +1,6 @@
 // main.cpp
 #include "Server.hpp"
 #include <boost/asio.hpp>
-
-
 int main() {
     try {
         // Create an io_context object, describes the I/O context used by the server.
