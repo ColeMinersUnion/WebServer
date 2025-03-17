@@ -57,7 +57,7 @@ private:
     std::string read_file(const std::string& path, bool& found);
     
     bool isExecutable(const std::string& extension);
-    std::string execute(const std::string& path, bool& found);
+    std::string execute(const std::string& path, const std::string& uri, bool& found);
 
     //* Objects and member variables.
     boost::asio::ip::tcp::acceptor acceptor_;

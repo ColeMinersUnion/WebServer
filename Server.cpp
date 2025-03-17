@@ -55,7 +55,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* If the file is executable, execute it.
     if (isExecutable(uri)) {
         std::cout << "Executable file found" << std::endl;
-        request_body = execute(file_path, file_found);
+        request_body = execute(file_path, uri, file_found);
     } else {
         request_body = read_file(file_path, file_found);
 
@@ -116,6 +116,8 @@ std::string Server::get_mime_type(const std::string& extension) {
     if (extension.ends_with(".jpg")) return "image/jpeg";
     if (extension.ends_with(".png")) return "image/png";
     if (extension.ends_with(".css")) return "text/css";
+    //Executable files will return text/plain to return any errors and what not
+
     if (extension.ends_with(".o")) return "text/plain";
     return "application/octet-stream";
 }
@@ -134,8 +136,8 @@ bool Server::isExecutable(const std::string& extension){
   The parent process will wait for the child process to finish executing.
   The function will return the output of the child process. 
 */
-std::string Server::execute(const std::string& path, bool& found){
-    //* Is the file in the bin directory?
+std::string Server::execute(const std::string& path, const std::string& uri, bool& found){
+    // Debugged with the help of Mr. GPT
     // Check if file exists using access()
     if (access(path.c_str(), F_OK) == -1) {
         std::cerr << "File not found" << std::endl;
@@ -144,12 +146,7 @@ std::string Server::execute(const std::string& path, bool& found){
     }
     found = true;
 
-    char cwd[256];
-    if (getcwd(cwd, sizeof(cwd)) != nullptr) {
-        std::cout << "Current working directory: " << cwd << std::endl;
-    }
-
-    std::string exe_path_str = "../bin/Extend.o";
+    std::string exe_path_str = "../bin/" + uri;
     std::cout << "Executing: " << exe_path_str << std::endl;
 
     int pipefd[2];
