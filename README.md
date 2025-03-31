@@ -12,3 +12,6 @@ There was a major refactoring this homework, I tried to future proof this code t
 
 ## HW 4
 All unit tests have passed. (All four python files in Testing/). I created Extend.o specifically such that it was easy to test that it works with code. This code is not super thread-safe, I'm working to build in more of that threading best practices as I go through. 
+
+## HW 5
+I included picture proof of the tests passing this time in the /Testing/Proof directory. You may see warnings on Tests and Tested. For these, I used two functions that returned values in my test files. These were helpful with running outside of the testing environment. For this homework, I created two more executable files (Output.o and Output.exe), both of which just printed "Hello World!" to cout. The output in cout was then piped to the parent process to be returned back to the user. These files were derived from /Sources/Output.cpp. 

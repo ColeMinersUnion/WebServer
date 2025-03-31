@@ -49,7 +49,7 @@ def test_binary_404():
 def test_binary_again():
     res = requests.get(URL + 'Hat.jpg')
     assert res.status_code == 200
-    with open('../bin/goat.jpg', 'rb') as f:
+    with open('../bin/Hat.jpg', 'rb') as f:
         assert res.content == f.read()
 
     

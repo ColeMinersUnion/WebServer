@@ -6,6 +6,12 @@ def test_pipe():
     assert res.text == "Hello World!\n", "Pipe test failed"
     print("Pipe test passed")
 
+def test_pipe_again():
+    res = requests.get("http://localhost:8000/Output.exe")
+    assert res.status_code == 200, "Pipe test failed"
+    assert res.text == "Hello World!\n", "Pipe test failed"
+    print("Pipe test passed")
+
 if __name__ == "__main__":
     test_pipe()
     print("All tests passed")
