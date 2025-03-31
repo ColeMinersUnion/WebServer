@@ -61,6 +61,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
         request_body = read_file(file_path, file_found);
 
     }
+    std::cout << "\nRequest body: " << request_body << "\n" << std::endl;
 
     //* Streaming the response to the client.
     std::ostringstream response_stream;
@@ -123,12 +124,14 @@ std::string Server::get_mime_type(const std::string& extension) {
     //Executable files will return text/plain to return any errors and what not
 
     if (extension.ends_with(".o")) return "text/plain";
+    if (extension.ends_with(".exe")) return "text/plain";
     return "application/octet-stream";
 }
 
 bool Server::isExecutable(const std::string& extension){
     //* Is the executable file an object file? (Can I execute it)
     if (extension.ends_with(".o")) return true;
+    if (extension.ends_with(".exe")) return true;
     return false;
 }
 
