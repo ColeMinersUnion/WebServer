@@ -147,6 +147,7 @@ bool Server::isExecutable(const std::string& extension){
 bool Server::fileFound(const std::string &path){
     if (access(path.c_str(), F_OK) == -1) {
         std::cerr << "File not found" << std::endl;
+        std::cerr << "Path: " << path << std::endl;
         return false;
     }
     return true;

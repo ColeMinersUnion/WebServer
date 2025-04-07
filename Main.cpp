@@ -28,7 +28,12 @@ int main() {
     }
 
     
-
+    // std::cout << config_map["ROOT"] << std::endl;
+    // std::cout << config_map["INDEX"] << std::endl;
+    // std::cout << config_map["FILE_NOT_FOUND"] << std::endl;
+    // std::cout << std::stoi(config_map["NUM_THREADS"]) << std::endl;
+    // std::cout << config_map["PORT"] << std::endl; 
+            
 
     
     
@@ -40,7 +45,13 @@ int main() {
         //!Note to self: Since I'm using CMAKE, I must use absolute paths for file io.
         //* Instantiates the server object.
         //* IO context, port, root directory, and number of threads.
-        Server server(io_context, 8000, "/Users/chansen/WebServer/bin", 3, "/index.html", "/404.html");
+        Server server(
+            io_context, 
+            std::stoi(config_map["PORT"]), 
+            config_map["ROOT"], 
+            stoi(config_map["NUM_THREADS"]), 
+            config_map["INDEX"], 
+            config_map["FILE_NOT_FOUND"]);
         //* Starts the server
         server.start();
         //* Runs the io_context object.
