@@ -4,19 +4,33 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <unordered_map>
 
 
 
 int main() {
 
     //* Load in configuration file
-    /*
-    std::ifstream config = std::ifstream("WebServer.cfg");
+    
+    std::ifstream config = std::ifstream("../WebServer.cfg");
     if (!config) {
         std::cerr << "Error opening configuration file." << std::endl;
         return 1;
     }
-    */
+    std::unordered_map<std::string, std::string> config_map;
+    std::string configuration;
+    while(getline(config, configuration)){
+        std::istringstream iss(configuration);
+        std::string key, value;
+        if (std::getline(iss, key, '=') && std::getline(iss, value)) {
+            config_map[key] = value;
+        }
+    }
+
+    
+
+
+    
     
 
 
@@ -26,7 +40,7 @@ int main() {
         //!Note to self: Since I'm using CMAKE, I must use absolute paths for file io.
         //* Instantiates the server object.
         //* IO context, port, root directory, and number of threads.
-        Server server(io_context, 8000, "/Users/chansen/WebServer/bin", 3);
+        Server server(io_context, 8000, "/Users/chansen/WebServer/bin", 3, "/index.html", "/404.html");
         //* Starts the server
         server.start();
         //* Runs the io_context object.
@@ -34,6 +48,7 @@ int main() {
     } catch (const std::exception& e) {
         //* Used for debugging.
         std::cerr << "Error: " << e.what() << std::endl;
+        return 1;
     }
     return 0;
 }

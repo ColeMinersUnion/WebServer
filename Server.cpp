@@ -2,14 +2,17 @@
 
 //*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 //* The acceptor object is used to listen for incoming connections.
-Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads) {
+Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file)
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), index_file(index_file), not_found_file(not_found_file) {
         Server::current_requests.resize(num_threads);
     }
 
 //* Starts the server.
 void Server::start() {
-    Server::current_requests[0].state = WAITING;
+    for (int i = 0; i < Server::current_requests.size(); i++) {
+        Server::current_requests[i].state = WAITING;;
+        Server::current_requests[i].thread_id = i;
+    }
     do_accept();
 }
 
@@ -32,8 +35,19 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* Sets the state of the server
     Server::current_requests[thread_id].state = PROCESSING;
 
-    //* Reades the request. '\r\n\r\n' is the end of the request.
-    boost::asio::read_until(*socket, buffer_, "\r\n\r\n");
+    //* Reads the request. '\r\n\r\n' is the end of the request.
+    boost::system::error_code ec;
+    size_t bytes_transferred = boost::asio::read_until(*socket, buffer_, "\r\n\r\n", ec);
+
+    if (ec == boost::asio::error::eof) {
+        std::cerr << "Client closed the connection prematurely (EOF encountered)" << std::endl;
+        Server::current_requests[thread_id].state = FINISHED;
+        return;
+    } else if (ec) {
+        std::cerr << "Error reading request: " << ec.message() << std::endl;
+        Server::current_requests[thread_id].state = FINISHED;
+        return;
+    }
 
     //* Parses the request.
     std::istream request_stream(&buffer_);
@@ -46,36 +60,36 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     request_line_stream >> method >> uri >> version;
 
     //* If the uri is empty, set it to index.html.
-    if (uri == "/") uri = "/index.html";
+    if (uri == "/") uri = Server::index_file;
 
     //* File navigation purposes
     std::string file_path = root_directory_ + uri;
     bool file_found;
     std::string request_body;;
     //* If the file is executable, execute it.
-    if (isExecutable(uri)) {
+    file_found = fileFound(file_path);
+    if (!file_found){
+        std::cout << "File not found. Using 404.html" << std::endl;
+        file_path = root_directory_ + Server::not_found_file;
+        request_body = read_file(file_path);
+    }
+    else if (isExecutable(uri)) {
         std::cout << "Executable file found" << std::endl;
-        request_body = execute(file_path, uri, file_found, thread_id);
+        request_body = execute(file_path, uri, thread_id);
     } else {
         //* Otherwise read in the file
-        request_body = read_file(file_path, file_found);
+        request_body = read_file(file_path);
 
     }
     std::cout << "\nRequest body: " << request_body << "\n" << std::endl;
-
+    //std::cout << get_mime_type(file_path) << std::endl;
     //* Streaming the response to the client.
     std::ostringstream response_stream;
-    if (file_found) {
-        //* Responds by sending the requested file.
-        response_stream << "HTTP/1.1 200 OK\r\n";
-        response_stream << "Content-Length: " << request_body.size() << "\r\n";
-        response_stream << "Content-Type: " << get_mime_type(file_path) << "\r\n\r\n";
-        //*the appropriate response
-        response_stream << request_body;
-    } else {
-        //* Responds with a 404 error.
-        response_stream << "HTTP/1.1 404 Not Found\r\n\r\n";
-    }
+    response_stream << "HTTP/1.1 200 OK\r\n";
+    response_stream << "Content-Length: " << request_body.size() << "\r\n";
+    response_stream << "Content-Type: " << get_mime_type(file_path) << "\r\n\r\n";
+    //*the appropriate response
+    response_stream << request_body;
 
     //* Converts to a response.
    std::string response = response_stream.str();
@@ -86,9 +100,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     Server::current_requests[thread_id].timestamp = std::time(nullptr);
     Server::current_requests[thread_id].response = response;
     //* Printing parts of the request for validation purposes.
-    std::cout << "Request: " << Server::current_requests[0].request << std::endl;
-    std::cout << "Timestamp: " << Server::current_requests[0].timestamp << std::endl;
-    std::cout << "Response: " << Server::current_requests[0].response << std::endl;
+    std::cout << "Request: " << Server::current_requests[thread_id].request << std::endl;
+    std::cout << "Timestamp: " << Server::current_requests[thread_id].timestamp << std::endl;
+    std::cout << "Response: " << Server::current_requests[thread_id].response << std::endl;
 
     //* Sends the response.
     Server::current_requests[thread_id].state = RESPONDING;
@@ -100,14 +114,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 }
 
 //* Reading files from the directory. 
-std::string Server::read_file(const std::string& path, bool& found) {
+std::string Server::read_file(const std::string& path) {
     //* Does the file exist?
     std::ifstream file(path, std::ios::binary);
-    if (!file) {
-        found = false;
-        return "";
-    }
-    found = true;
     //* Stream the contents back to the handler
     std::ostringstream contents;
     contents << file.rdbuf();
@@ -135,21 +144,25 @@ bool Server::isExecutable(const std::string& extension){
     return false;
 }
 
+bool Server::fileFound(const std::string &path){
+    if (access(path.c_str(), F_OK) == -1) {
+        std::cerr << "File not found" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+
 /*
   This function forks the process.
   The forked process will execute the file at the path.
   The parent process will wait for the child process to finish executing.
   The function will return the output of the child process. 
 */
-std::string Server::execute(const std::string& path, const std::string& uri, bool& found, int thread_id){
+std::string Server::execute(const std::string& path, const std::string& uri, int thread_id){
     // Debugged with the help of Mr. GPT
     // Check if file exists using access
-    if (access(path.c_str(), F_OK) == -1) {
-        std::cerr << "File not found" << std::endl;
-        found = false;
-        return "";
-    }
-    found = true;
+    
     //* The current working directory is in ./build
     //* I need to access the bin directory to execute the file
     std::string exe_path_str = "../bin" + uri;

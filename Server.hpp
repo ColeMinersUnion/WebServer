@@ -45,7 +45,7 @@ typedef struct _record record;
 class Server {
 public:
     //* Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
-    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads);
+    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file);
     //* Starts the server.
     void start();
 
@@ -59,18 +59,25 @@ private:
     //Figures out how to format the response.
     std::string get_mime_type(const std::string& extension);
     //Reads the file from the bin directory.
-    std::string read_file(const std::string& path, bool& found);
+    std::string read_file(const std::string& path);
     
+    //Checks to see if the file exists.
+    bool fileFound(const std::string& path);
+
     //checks to see if a given file is executable.
     bool isExecutable(const std::string& extension);
     //Forks the process and Executes the file.
-    std::string execute(const std::string& path, const std::string& uri, bool& found, int thread_id);
+    std::string execute(const std::string& path, const std::string& uri, int thread_id);
 
     //* Objects and member variables.
     boost::asio::ip::tcp::acceptor acceptor_;
     std::string root_directory_;
     std::vector<record> current_requests;
     boost::asio::streambuf buffer_; 
+
+    //Will be configured later. 
+    const std::string index_file;
+    const std::string not_found_file;
 
     //* Threadpool stuff!
     ThreadPool pool;
