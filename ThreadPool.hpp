@@ -38,7 +38,7 @@ class ThreadPool {
         std::vector<std::thread> workers;
 
         //A queue to store the tasks.
-        std::queue<std::function<void()>> tasks;
+        std::queue<std::function<void(int)>> tasks;
         
         //A mutex to protect the queue and prevent race conditions
         std::mutex queue_mutex;

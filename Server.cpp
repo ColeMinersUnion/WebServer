@@ -19,8 +19,8 @@ void Server::do_accept() {
     auto socket = std::make_shared<boost::asio::ip::tcp::socket>(acceptor_.get_executor());
     acceptor_.async_accept(*socket, [this, socket](boost::system::error_code ec) {
         if (!ec) {
-            pool.enqueue([this, socket]() mutable {
-                handle_request(socket, 0);
+            pool.enqueue([this, socket](int thread_id) mutable {
+                handle_request(socket, thread_id); // Pass thread_id
             });
         }
         do_accept();

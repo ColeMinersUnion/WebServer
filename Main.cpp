@@ -1,7 +1,25 @@
 // main.cpp
 #include "Server.hpp"
 #include <boost/asio.hpp>
+#include <iostream>
+#include <string>
+#include <fstream>
+
+
+
 int main() {
+
+    //* Load in configuration file
+    /*
+    std::ifstream config = std::ifstream("WebServer.cfg");
+    if (!config) {
+        std::cerr << "Error opening configuration file." << std::endl;
+        return 1;
+    }
+    */
+    
+
+
     try {
         // Create an io_context object, describes the I/O context used by the server.
         boost::asio::io_context io_context;

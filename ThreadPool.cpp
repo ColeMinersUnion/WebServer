@@ -4,7 +4,10 @@
 //Constructor. Initializes the thread pool with the specified number of threads.
 ThreadPool::ThreadPool(size_t num_threads) {
     for (size_t i = 0; i < num_threads; ++i) {
-        workers.emplace_back([this] {
+        workers.emplace_back([this, i] {
+            // Thread-local variable to store the thread ID
+            thread_local int thread_id = i;
+
             while (true) {
                 std::unique_lock<std::mutex> lock(queue_mutex);
                 condition.wait(lock, [this] { return !tasks.empty() || stop; });
@@ -12,7 +15,7 @@ ThreadPool::ThreadPool(size_t num_threads) {
                 auto task = std::move(tasks.front());
                 tasks.pop();
                 lock.unlock();
-                task();
+                task(thread_id); // Pass thread_id to the task
             }
         });
     }
