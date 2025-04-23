@@ -52,7 +52,8 @@ int main() {
             std::stoi(config_map["NUM_THREADS"]), 
             config_map["INDEX"], 
             config_map["FILE_NOT_FOUND"],
-            std::stoi(config_map["FILE_BUFFER_SIZE"])
+            std::stoi(config_map["FILE_BUFFER_SIZE"]),
+            std::stoi(config_map["NETWORK_BUFFER_SIZE"])
         );
         //* Starts the server
         server.start();

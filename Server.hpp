@@ -45,7 +45,7 @@ typedef struct _record record;
 class Server {
 public:
     //* Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
-    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file, size_t buffer_size);
+    Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file, size_t buffer_size, size_t boost_buf_size);
     //* Starts the server.
     void start();
 
@@ -82,6 +82,7 @@ private:
 
     //Fixing something I should have done a while ago I suppose
     size_t rd_buf_size;
+    size_t boost_buf_size;
 
     //* Threadpool stuff!
     ThreadPool pool;

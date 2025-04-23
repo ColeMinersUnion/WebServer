@@ -2,18 +2,21 @@
 
 //*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 //* The acceptor object is used to listen for incoming connections.
-Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file, size_t buffer_size)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), index_file(index_file), not_found_file(not_found_file), rd_buf_size(buffer_size) {
+Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file, size_t buffer_size, size_t boost_buf_size)
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), index_file(index_file), not_found_file(not_found_file), rd_buf_size(buffer_size), boost_buf_size(boost_buf_size) {
         Server::current_requests.resize(num_threads);
     }
 
 //* Starts the server.
 void Server::start() {
+
+    //set maximum size of buffer_ to boost_buf_size
+
+
     for (int i = 0; i < Server::current_requests.size(); i++) {
         Server::current_requests[i].state = WAITING;;
         Server::current_requests[i].thread_id = i;
     }
-    std::cout << "Network Buffer Size" << buffer_.max_size() << std::endl;
     do_accept();
 }
 
@@ -39,6 +42,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* Reads the request. '\r\n\r\n' is the end of the request.
     boost::system::error_code ec;
     size_t bytes_transferred = boost::asio::read_until(*socket, buffer_, "\r\n\r\n", ec);
+    //size_t bytes_transferred = boost::asio::read(*socket, buffer_, boost::asio::transfer_at_least(1), ec);
+
+
 
     if (ec == boost::asio::error::eof) {
         std::cerr << "Client closed the connection prematurely (EOF encountered)" << std::endl;
@@ -96,7 +102,6 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 
     //* Converts to a response.
    std::string response = response_stream.str();
-    
 
     //* Records the request in the control block
     Server::current_requests[thread_id].request = request_line;
@@ -109,7 +114,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 
     //* Sends the response.
     Server::current_requests[thread_id].state = RESPONDING;
-    boost::asio::write(*socket, boost::asio::buffer(response));
+    boost::asio::write(*socket, boost::asio::buffer(response, boost_buf_size));
     Server::current_requests[thread_id].state = FINISHED;
 
     buffer_.consume(buffer_.size());
@@ -241,3 +246,6 @@ std::string Server::execute(const std::string& path, const std::string& uri, int
         return "Fork failed";
     }
 }
+
+
+//* Completion condition for boost::asio::read
