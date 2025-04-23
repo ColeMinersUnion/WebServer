@@ -17,6 +17,7 @@ void Server::start() {
         read_buffers[i] = new char[rd_buf_size];
         std::string tmp;
         network_buffers[i] = boost::asio::buffer(tmp, boost_buf_size);
+        read_buffers[i] = new char[rd_buf_size];
     }
 
 
@@ -86,7 +87,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* If the file is executable, execute it.
     file_found = fileFound(file_path);
     if (!file_found){
-        std::cout << "File not found. Using 404.html" << std::endl;
+        //std::cout << "File not found. Using 404.html" << std::endl;
         file_path = root_directory_ + Server::not_found_file;
         
         size_t file_size = std::filesystem::file_size(file_path);
@@ -96,7 +97,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 
     }
     else if (isExecutable(uri)) {
-        std::cout << "Executable file found" << std::endl;
+        //std::cout << "Executable file found" << std::endl;
         request_body = execute(file_path, uri, thread_id);
     } else {
         //* Otherwise read in the file
@@ -107,7 +108,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 
 
     }
-    std::cout << "\nRequest body: " << request_body << "\n" << std::endl;
+    //std::cout << "\nRequest body: " << request_body << "\n" << std::endl;
     //std::cout << get_mime_type(file_path) << std::endl;
     //* Streaming the response to the client.
     std::ostringstream response_stream;
@@ -116,7 +117,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     response_stream << "Content-Type: " << get_mime_type(file_path) << "\r\n\r\n";
     //*the appropriate response
     response_stream << request_body;
-    std::cout <<"\nWe got this far\n" << std::endl;
+    //std::cout <<"\nWe got this far\n" << std::endl;
     //* Converts to a response.
     std::string response = response_stream.str();
 
@@ -125,9 +126,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     Server::current_requests[thread_id].timestamp = std::time(nullptr);
     Server::current_requests[thread_id].response = response;
     //* Printing parts of the request for validation purposes.
-    std::cout << "Request: " << Server::current_requests[thread_id].request << std::endl;
-    std::cout << "Timestamp: " << Server::current_requests[thread_id].timestamp << std::endl;
-    std::cout << "Response: " << Server::current_requests[thread_id].response << std::endl;
+    //std::cout << "Request: " << Server::current_requests[thread_id].request << std::endl;
+    //std::cout << "Timestamp: " << Server::current_requests[thread_id].timestamp << std::endl;
+    //std::cout << "Response: " << Server::current_requests[thread_id].response << std::endl;
 
     //* Sends the response.
     Server::current_requests[thread_id].state = RESPONDING;
@@ -137,7 +138,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
         //Boost::asio::buffer should be defined at the start of the code.
         network_buffers[thread_id] = boost::asio::buffer(response_chunk, boost_buf_size);
         boost::asio::write(*socket, network_buffers[thread_id]);
-        std::cout << "Sending chunk: " << response_chunk << std::endl;
+        //std::cout << "Sending chunk: " << response_chunk << std::endl;
     }
     //boost::asio::write(*socket, boost::asio::buffer(response, boost_buf_size));
     Server::current_requests[thread_id].state = FINISHED;
@@ -212,7 +213,7 @@ std::string Server::execute(const std::string& path, const std::string& uri, int
     //* The current working directory is in ./build
     //* I need to access the bin directory to execute the file
     std::string exe_path_str = "../bin" + uri;
-    std::cout << "Executing: " << exe_path_str << std::endl;
+    //std::cout << "Executing: " << exe_path_str << std::endl;
 
     //Creating a pipe to return execvp errors to the uers.
     int pipefd[2];
@@ -259,9 +260,9 @@ std::string Server::execute(const std::string& path, const std::string& uri, int
         waitpid(pid, &status, 0);
         // Check if process exited normally or by signal
         if (WIFEXITED(status)) {
-            std::cout << "Process finished with status: " << WEXITSTATUS(status) << std::endl;
+            //std::cout << "Process finished with status: " << WEXITSTATUS(status) << std::endl;
         } else if (WIFSIGNALED(status)) {
-            std::cerr << "Process terminated by signal: " << WTERMSIG(status) << std::endl;
+            //std::cerr << "Process terminated by signal: " << WTERMSIG(status) << std::endl;
         }
 
         return output;
