@@ -2,8 +2,8 @@
 
 //*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 //* The acceptor object is used to listen for incoming connections.
-Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), index_file(index_file), not_found_file(not_found_file) {
+Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file, size_t buffer_size)
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), index_file(index_file), not_found_file(not_found_file), rd_buf_size(buffer_size) {
         Server::current_requests.resize(num_threads);
     }
 
@@ -13,6 +13,7 @@ void Server::start() {
         Server::current_requests[i].state = WAITING;;
         Server::current_requests[i].thread_id = i;
     }
+    std::cout << "Network Buffer Size" << buffer_.max_size() << std::endl;
     do_accept();
 }
 
@@ -65,7 +66,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     //* File navigation purposes
     std::string file_path = root_directory_ + uri;
     bool file_found;
-    std::string request_body;;
+
+    //Request body needs to be statically allocated at the beginning of the program
+    std::string request_body;
     //* If the file is executable, execute it.
     file_found = fileFound(file_path);
     if (!file_found){
@@ -119,8 +122,20 @@ std::string Server::read_file(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     //* Stream the contents back to the handler
     std::ostringstream contents;
-    contents << file.rdbuf();
-    return contents.str();
+
+    //Setting the size of the file read buffer here!
+    // get pointer to associated buffer object
+    std::filebuf* pbuf = file.rdbuf();
+
+    // get file size using buffer's members
+
+    // allocate memory to contain file data
+    char* buffer=new char[rd_buf_size];
+
+    // get file data
+    pbuf->sgetn (buffer, rd_buf_size);
+
+    return std::string(buffer);
 }
 
 std::string Server::get_mime_type(const std::string& extension) {

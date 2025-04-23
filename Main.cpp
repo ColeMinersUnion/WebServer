@@ -49,9 +49,11 @@ int main() {
             io_context, 
             std::stoi(config_map["PORT"]), 
             config_map["ROOT"], 
-            stoi(config_map["NUM_THREADS"]), 
+            std::stoi(config_map["NUM_THREADS"]), 
             config_map["INDEX"], 
-            config_map["FILE_NOT_FOUND"]);
+            config_map["FILE_NOT_FOUND"],
+            std::stoi(config_map["FILE_BUFFER_SIZE"])
+        );
         //* Starts the server
         server.start();
         //* Runs the io_context object.
