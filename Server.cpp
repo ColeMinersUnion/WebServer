@@ -80,14 +80,23 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     if (!file_found){
         std::cout << "File not found. Using 404.html" << std::endl;
         file_path = root_directory_ + Server::not_found_file;
-        request_body = read_file(file_path);
+        
+        size_t file_size = std::filesystem::file_size(file_path);
+        for(int i = 0; i < file_size/rd_buf_size + 1; i++){
+            request_body += read_file(file_path, i*rd_buf_size);
+        }
+
     }
     else if (isExecutable(uri)) {
         std::cout << "Executable file found" << std::endl;
         request_body = execute(file_path, uri, thread_id);
     } else {
         //* Otherwise read in the file
-        request_body = read_file(file_path);
+        size_t file_size = std::filesystem::file_size(file_path);
+        for(int i = 0; i < file_size/rd_buf_size+1; i++){
+            request_body += read_file(file_path, i*rd_buf_size);
+        }
+
 
     }
     std::cout << "\nRequest body: " << request_body << "\n" << std::endl;
@@ -99,9 +108,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     response_stream << "Content-Type: " << get_mime_type(file_path) << "\r\n\r\n";
     //*the appropriate response
     response_stream << request_body;
-
+    std::cout <<"\nWe got this far\n" << std::endl;
     //* Converts to a response.
-   std::string response = response_stream.str();
+    std::string response = response_stream.str();
 
     //* Records the request in the control block
     Server::current_requests[thread_id].request = request_line;
@@ -114,7 +123,13 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 
     //* Sends the response.
     Server::current_requests[thread_id].state = RESPONDING;
-    boost::asio::write(*socket, boost::asio::buffer(response, boost_buf_size));
+    std::string response_chunk;
+    for(int i = 0; i < response.size()/boost_buf_size+1; i++){
+        response_chunk = response.substr(i*boost_buf_size, (i+1)*boost_buf_size);
+        boost::asio::write(*socket, boost::asio::buffer(response_chunk, boost_buf_size));
+        std::cout << "Sending chunk: " << response_chunk << std::endl;
+    }
+    //boost::asio::write(*socket, boost::asio::buffer(response, boost_buf_size));
     Server::current_requests[thread_id].state = FINISHED;
 
     buffer_.consume(buffer_.size());
@@ -122,17 +137,16 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 }
 
 //* Reading files from the directory. 
-std::string Server::read_file(const std::string& path) {
+std::string Server::read_file(const std::string& path, int start_pos) {
     //* Does the file exist?
     std::ifstream file(path, std::ios::binary);
     //* Stream the contents back to the handler
-    std::ostringstream contents;
 
     //Setting the size of the file read buffer here!
     // get pointer to associated buffer object
     std::filebuf* pbuf = file.rdbuf();
+    pbuf->pubseekpos(start_pos);
 
-    // get file size using buffer's members
 
     // allocate memory to contain file data
     char* buffer=new char[rd_buf_size];

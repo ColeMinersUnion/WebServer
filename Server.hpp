@@ -12,6 +12,7 @@
 #include <sstream>
 #include <ctime>
 #include <vector>
+#include <filesystem>
 
 //* HW3
 #include "ThreadPool.hpp"
@@ -59,7 +60,7 @@ private:
     //Figures out how to format the response.
     std::string get_mime_type(const std::string& extension);
     //Reads the file from the bin directory.
-    std::string read_file(const std::string& path);
+    std::string read_file(const std::string& path, int start_pos = 0);
     
     //Checks to see if the file exists.
     bool fileFound(const std::string& path);

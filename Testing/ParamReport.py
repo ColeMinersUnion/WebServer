@@ -22,12 +22,21 @@ def end_process(process: subprocess.Popen):
     process.terminate()
     time.sleep(1)
 
+def powers_of_two():
+    #Generator to yield powers of two
+    for i in range(7, 18):
+        yield 2 ** i
+    
+
 #Increments the threadpool size in WebServer.cfg
 def threadpool_size():
-    for i in range(1, 11):
-        with open('../WebServer.cfg', 'w') as f:
-            f.write(f'ROOT=/Users/chansen/WebServer/bin\nPORT=8000\nNUM_THREADS={i}\nFILE_NOT_FOUND=/404.html\nINDEX=/index.html')
-        yield i
+    for i in range(1, 11): #Threads
+        for j in powers_of_two: #File Buffer Size
+            for k in powers_of_two: #Network Buffer Size
+                #Write to WebServer.cfg
+                with open('../WebServer.cfg', 'w') as f:
+                    f.write(f'ROOT=/Users/chansen/WebServer/bin\nPORT=8000\nNUM_THREADS={i}\nFILE_NOT_FOUND=/404.html\nINDEX=/index.html\nFILE_BUFFER_SIZE={j}\nNETWORK_BUFFER_SIZE={k}')
+                yield i, j, k
 
 
 FILES = ('404.html',
@@ -45,10 +54,11 @@ FILES = ('404.html',
          'test.txt',
          'Thread_Process.png')
 
-#GEnerator to increment webserver threadpool size
 
+#Takes number of threads to use as batch size for requests.
 def test_webserver(threads: int):
     pass
+    #Returns time taken to complete all requests, average time to complete a request, throughput
 
 
 # As defined by boost::asio::streambuf::max_size()
@@ -56,10 +66,10 @@ def test_webserver(threads: int):
 
 if __name__ == '__main__':
     data = []
-    for i in threadpool_size():
-        print(f'Running webserver with {i} threads')
+    for i, j, k in threadpool_size():
+        print(f'Running webserver with {i} threads, {j} file buffer size, {k} network buffer size')
         server = run_webserver()
 
-        time.sleep(10)
+        test_webserver(i)
         end_process(server)
 
