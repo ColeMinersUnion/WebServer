@@ -3,14 +3,22 @@
 //*Constructor. Initializes the acceptor object to listen on the specified port and the root directory where the files are stored.
 //* The acceptor object is used to listen for incoming connections.
 Server::Server(boost::asio::io_context& io_context, short port, const std::string& root_dir, int num_threads, const std::string& index_file, const std::string& not_found_file, size_t buffer_size, size_t boost_buf_size)
-    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), index_file(index_file), not_found_file(not_found_file), rd_buf_size(buffer_size), boost_buf_size(boost_buf_size) {
+    : acceptor_(io_context, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)), root_directory_(root_dir), buffer_(), pool(num_threads), num_threads(num_threads), index_file(index_file), not_found_file(not_found_file), rd_buf_size(buffer_size), boost_buf_size(boost_buf_size) {
         Server::current_requests.resize(num_threads);
     }
 
 //* Starts the server.
 void Server::start() {
 
-    //set maximum size of buffer_ to boost_buf_size
+    //Initialize buffers
+    network_buffers.resize(Server::num_threads);
+    read_buffers.resize(Server::num_threads);
+    for(int i = 0; i < Server::num_threads; i++){
+        read_buffers[i] = new char[rd_buf_size];
+        std::string tmp;
+        network_buffers[i] = boost::asio::buffer(tmp, boost_buf_size);
+    }
+
 
 
     for (int i = 0; i < Server::current_requests.size(); i++) {
@@ -83,7 +91,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
         
         size_t file_size = std::filesystem::file_size(file_path);
         for(int i = 0; i < file_size/rd_buf_size + 1; i++){
-            request_body += read_file(file_path, i*rd_buf_size);
+            request_body += read_file(file_path, i*rd_buf_size, thread_id);
         }
 
     }
@@ -94,7 +102,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
         //* Otherwise read in the file
         size_t file_size = std::filesystem::file_size(file_path);
         for(int i = 0; i < file_size/rd_buf_size+1; i++){
-            request_body += read_file(file_path, i*rd_buf_size);
+            request_body += read_file(file_path, i*rd_buf_size, thread_id);
         }
 
 
@@ -126,7 +134,9 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
     std::string response_chunk;
     for(int i = 0; i < response.size()/boost_buf_size+1; i++){
         response_chunk = response.substr(i*boost_buf_size, (i+1)*boost_buf_size);
-        boost::asio::write(*socket, boost::asio::buffer(response_chunk, boost_buf_size));
+        //Boost::asio::buffer should be defined at the start of the code.
+        network_buffers[thread_id] = boost::asio::buffer(response_chunk, boost_buf_size);
+        boost::asio::write(*socket, network_buffers[thread_id]);
         std::cout << "Sending chunk: " << response_chunk << std::endl;
     }
     //boost::asio::write(*socket, boost::asio::buffer(response, boost_buf_size));
@@ -137,7 +147,7 @@ void Server::handle_request(std::shared_ptr<boost::asio::ip::tcp::socket> socket
 }
 
 //* Reading files from the directory. 
-std::string Server::read_file(const std::string& path, int start_pos) {
+std::string Server::read_file(const std::string& path, int start_pos, int thread_id) {
     //* Does the file exist?
     std::ifstream file(path, std::ios::binary);
     //* Stream the contents back to the handler
@@ -149,12 +159,13 @@ std::string Server::read_file(const std::string& path, int start_pos) {
 
 
     // allocate memory to contain file data
-    char* buffer=new char[rd_buf_size];
+    //This needs to be statically allocated at the beginning of the program. 
+    read_buffers[thread_id] = new char[rd_buf_size];
 
     // get file data
-    pbuf->sgetn (buffer, rd_buf_size);
+    pbuf->sgetn (read_buffers[thread_id], rd_buf_size);
 
-    return std::string(buffer);
+    return std::string(read_buffers[thread_id]);
 }
 
 std::string Server::get_mime_type(const std::string& extension) {

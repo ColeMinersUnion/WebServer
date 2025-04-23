@@ -60,7 +60,7 @@ private:
     //Figures out how to format the response.
     std::string get_mime_type(const std::string& extension);
     //Reads the file from the bin directory.
-    std::string read_file(const std::string& path, int start_pos = 0);
+    std::string read_file(const std::string& path, int start_pos = 0, int thread_id=0);
     
     //Checks to see if the file exists.
     bool fileFound(const std::string& path);
@@ -84,6 +84,11 @@ private:
     //Fixing something I should have done a while ago I suppose
     size_t rd_buf_size;
     size_t boost_buf_size;
+
+    std::vector<boost::asio::mutable_buffer> network_buffers;
+    std::vector<char*> read_buffers;
+    
+    int num_threads;
 
     //* Threadpool stuff!
     ThreadPool pool;
