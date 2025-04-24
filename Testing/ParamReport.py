@@ -4,6 +4,9 @@ import time
 import subprocess
 import random
 
+
+
+
 #Each Test
 #Should make 100 requests, in batches of 10(?), 20(?) to the webserver
 #I'm trying to find how many requests can be handled in parallel, throughput, files per time and average response.
